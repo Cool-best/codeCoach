@@ -44,6 +44,7 @@
 - `ToolMessage` 缺少 `tool_call_id`。
 - 断言失败。
 - 命令、可执行程序或文件路径不可用。
+- PowerShell 执行策略阻止 `.venv\Scripts\Activate.ps1` 等脚本运行。
 - 无法分类的异常。
 
 规则无法确定时，不会假装知道原因；请保存反馈并补充最近改动。

@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "pluginId": "codecoach.powershell-execution-policy",
+  "version": "1.0.0",
+  "rules": [
+    {
+      "id": "powershell.execution-policy.unsigned-script",
+      "priority": 110,
+      "errorPattern": "PSSecurityException|未对文件.+进行数字签名|无法在当前系统上运行该脚本",
+      "flags": "i",
+      "cwd": "any",
+      "category": "environment",
+      "title": "PowerShell 执行策略阻止了脚本运行",
+      "summary": "当前 PowerShell 进程的执行策略不允许运行未签名脚本。只在当前窗口临时设置为 Bypass，关闭窗口后会自动恢复原策略，不会修改系统全局安全设置。",
+      "actions": [
+        "在同一个 PowerShell 窗口执行 Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process",
+        "重新运行 .\\.venv\\Scripts\\Activate.ps1；如果虚拟环境不在当前目录，先切换到项目根目录",
+        "不要使用 LocalMachine 或 CurrentUser 作用域规避问题，也不需要以管理员身份修改全局策略"
+      ],
+      "suggestedCommands": [
+        "Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process",
+        ".\\.venv\\Scripts\\Activate.ps1",
+        "{{command}}"
+      ]
+    }
+  ]
+}

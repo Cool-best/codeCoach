@@ -28,7 +28,7 @@ const pluginSchema = z.object({
 type DiagnosticRule = z.infer<typeof ruleSchema>;
 
 interface PluginOptions {
-  builtInFile: string;
+  builtInDirectory: string;
   pluginDirectory: string;
 }
 
@@ -62,23 +62,25 @@ export async function diagnoseWithPlugins(
       summary: render(rule.summary, context),
       errorLine: lines.at(-1) ?? "未提供错误内容",
       actions: rule.actions.map((action) => render(action, context)),
-      suggestedCommands: rule.suggestedCommands.map((command) => render(command, context)),
+      suggestedCommands: rule.suggestedCommands.map((command) => render(command, context)).filter(Boolean),
     };
   }
   return diagnoseError(errorText, context);
 }
 
 async function pluginFiles(options: PluginOptions): Promise<string[]> {
-  const files = [options.builtInFile];
-  try {
-    const entries = await readdir(options.pluginDirectory, { withFileTypes: true });
-    for (const entry of entries) {
-      if (entry.isFile() && /(?:\.coachdiag|\.json)$/i.test(entry.name)) {
-        files.push(path.join(options.pluginDirectory, entry.name));
+  const files: string[] = [];
+  for (const directory of [options.builtInDirectory, options.pluginDirectory]) {
+    try {
+      const entries = await readdir(directory, { withFileTypes: true });
+      for (const entry of entries) {
+        if (entry.isFile() && /(?:\.coachdiag|\.json)$/i.test(entry.name)) {
+          files.push(path.join(directory, entry.name));
+        }
       }
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
     }
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
   }
   return files;
 }

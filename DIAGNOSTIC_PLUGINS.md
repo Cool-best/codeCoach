@@ -6,7 +6,7 @@ CodeCoach 支持单文件 `.coachdiag` 诊断插件。插件只包含声明式�
 
 每次点击“分析最后一行错误”时，应用依次读取：
 
-1. 应用内置的 `resources/diagnostics/python-modules.coachdiag`。
+1. 应用内置 `resources/diagnostics` 目录下的 `.coachdiag` 或 `.json` 文件。
 2. 用户目录 `%APPDATA%\CodeCoach\diagnostics\plugins` 下的 `.coachdiag` 或 `.json` 文件。
 3. 按 `priority` 从高到低匹配，最后使用内置诊断作为降级。
 

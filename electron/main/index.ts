@@ -172,7 +172,7 @@ async function diagnoseSessionError(sessionId: string, errorText: string, curren
     verification: context.step.verification,
     moduleFileExists: await moduleFileExists(context.workspace.path, context.step.verification?.moduleFile),
   }, {
-    builtInFile: path.join(app.getAppPath(), "resources/diagnostics/python-modules.coachdiag"),
+    builtInDirectory: path.join(app.getAppPath(), "resources/diagnostics"),
     pluginDirectory: path.join(app.getPath("userData"), "diagnostics/plugins"),
   });
 }
