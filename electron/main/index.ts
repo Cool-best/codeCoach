@@ -14,6 +14,7 @@ let store: LocalStore;
 let feedbackStore: FeedbackStore;
 let service: CoachService;
 let isQuitting = false;
+let isCollapsed = false;
 let expandedBounds: Electron.Rectangle | undefined;
 
 const ok = <T>(data: T): ApiResult<T> => ({ ok: true, data });
@@ -41,11 +42,12 @@ function register(
 
 async function createWindow(): Promise<void> {
   const settings = await store.getSettings();
+  isCollapsed = settings.collapsed;
   mainWindow = new BrowserWindow({
     width: 440,
     height: settings.collapsed ? 112 : 700,
     minWidth: 360,
-    minHeight: 96,
+    minHeight: settings.collapsed ? 96 : 420,
     transparent: true,
     backgroundColor: "#00000000",
     frame: false,
@@ -95,13 +97,16 @@ function sendSettings(settings: AppSettings): void {
 
 async function applySettings(settings: AppSettings): Promise<void> {
   if (!mainWindow) return;
-  const wasCollapsed = mainWindow.getSize()[1] <= 120;
+  const wasCollapsed = isCollapsed;
+  isCollapsed = settings.collapsed;
   if (settings.collapsed && !wasCollapsed) {
     expandedBounds = mainWindow.getBounds();
-    mainWindow.setResizable(false);
+    mainWindow.setMinimumSize(360, 96);
     mainWindow.setSize(expandedBounds.width, 112);
+    mainWindow.setResizable(false);
   } else if (!settings.collapsed && wasCollapsed) {
     const bounds = expandedBounds ?? { ...mainWindow.getBounds(), height: 700 };
+    mainWindow.setMinimumSize(360, 420);
     mainWindow.setResizable(true);
     mainWindow.setBounds({ ...bounds, width: Math.max(360, bounds.width), height: Math.max(420, bounds.height) });
   }
@@ -293,6 +298,10 @@ function registerIpc(): void {
     const settings = await store.saveSettings(input);
     await applySettings(settings);
     return settings;
+  });
+  register("window:resize", async (raw) => {
+    const input = z.object({ width: z.number().int().min(360).max(3000), height: z.number().int().min(420).max(3000) }).strict().parse(raw);
+    if (!isCollapsed) mainWindow?.setSize(input.width, input.height, false);
   });
   register("window:hide", async () => mainWindow?.hide());
   register("app:quit", quit);

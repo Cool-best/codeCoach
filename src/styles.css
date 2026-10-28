@@ -25,6 +25,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, summary:focus
 button:disabled { opacity: 0.42; cursor: not-allowed !important; }
 
 .app-shell {
+  position: relative;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -37,6 +38,9 @@ button:disabled { opacity: 0.42; cursor: not-allowed !important; }
 }
 .app-shell.is-collapsed { border-radius: 13px; }
 .app-body { position: relative; display: flex; flex: 1; min-height: 0; flex-direction: column; }
+.window-resize-handle { position: absolute; right: 1px; bottom: 1px; z-index: 90; width: 18px; height: 18px; cursor: nwse-resize; app-region: no-drag; -webkit-app-region: no-drag; }
+.window-resize-handle::before { position: absolute; right: 3px; bottom: 3px; width: 8px; height: 8px; content: ""; border-right: 2px solid var(--subtle); border-bottom: 2px solid var(--subtle); }
+.window-resize-handle:hover::before { border-color: var(--accent); }
 
 .titlebar {
   display: flex;

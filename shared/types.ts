@@ -191,6 +191,7 @@ export interface CoachApi {
   }): Promise<ApiResult<FeedbackReport>>;
   exportFeedback(): Promise<ApiResult<{ path: string; count: number } | null>>;
   setSettings(input: Partial<AppSettings>): Promise<ApiResult<AppSettings>>;
+  resizeWindow(input: { width: number; height: number }): Promise<ApiResult<void>>;
   hideWindow(): Promise<ApiResult<void>>;
   quitApp(): Promise<ApiResult<void>>;
   onSessionEvent(listener: (event: SessionEvent) => void): () => void;

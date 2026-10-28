@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Braces,
   Check,
@@ -46,6 +46,7 @@ export default function App() {
   const [notice, setNotice] = useState("");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const resizeState = useRef<{ pointerId: number; x: number; y: number; width: number; height: number } | undefined>(undefined);
 
   useEffect(() => {
     void unwrap(window.coach.bootstrap())
@@ -124,6 +125,33 @@ export default function App() {
     });
   };
 
+  const startResize = (event: React.PointerEvent<HTMLDivElement>): void => {
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    resizeState.current = {
+      pointerId: event.pointerId,
+      x: event.screenX,
+      y: event.screenY,
+      width: document.documentElement.clientWidth,
+      height: document.documentElement.clientHeight,
+    };
+  };
+
+  const resize = (event: React.PointerEvent<HTMLDivElement>): void => {
+    const start = resizeState.current;
+    if (!start || start.pointerId !== event.pointerId) return;
+    void window.coach.resizeWindow({
+      width: Math.round(start.width + event.screenX - start.x),
+      height: Math.round(start.height + event.screenY - start.y),
+    }).catch(() => undefined);
+  };
+
+  const stopResize = (event: React.PointerEvent<HTMLDivElement>): void => {
+    if (resizeState.current?.pointerId !== event.pointerId) return;
+    resizeState.current = undefined;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+  };
+
   return (
     <div className={`app-shell ${settings.collapsed ? "is-collapsed" : ""}`}>
       <header className="titlebar">
@@ -184,6 +212,7 @@ export default function App() {
           {feedbackOpen && session && workspace && <FeedbackPanel sessionId={session.sessionId} workspacePath={workspace.path} onClose={() => setFeedbackOpen(false)} />}
         </div>
       )}
+      {!settings.collapsed && <div className="window-resize-handle" title="调整窗口大小" onPointerDown={startResize} onPointerMove={resize} onPointerUp={stopResize} onPointerCancel={stopResize} />}
     </div>
   );
 }

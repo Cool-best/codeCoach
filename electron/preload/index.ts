@@ -15,6 +15,7 @@ const api: CoachApi = {
   saveFeedback: (input) => invoke("feedback:save", input),
   exportFeedback: () => invoke("feedback:export"),
   setSettings: (input) => invoke("settings:set", input),
+  resizeWindow: (input) => invoke("window:resize", input),
   hideWindow: () => invoke("window:hide"),
   quitApp: () => invoke("app:quit"),
   onSessionEvent: (listener) => {
