@@ -141,8 +141,19 @@ button:disabled { opacity: 0.42; cursor: not-allowed !important; }
 .sample pre { max-height: 310px; overflow: auto; margin: 0; padding: 12px; border: 1px solid var(--border); border-radius: 0 0 8px 8px; background: #0d111b; user-select: text; }
 .sample code { font-family: "Cascadia Code", Consolas, monospace; font-size: 10px; line-height: 1.65; background: transparent; }
 .code-note { color: var(--subtle); font-size: 9px; }
+.diagram-toolbar { display: flex; justify-content: flex-end; margin-bottom: 5px; }
+.diagram-toolbar button { display: flex; align-items: center; gap: 4px; padding: 4px 7px; color: #abb9eb; font-size: 9px; border: 1px solid var(--border); border-radius: 6px; background: rgba(130,156,255,0.05); cursor: pointer; }
+.diagram-toolbar button:hover { background: rgba(130,156,255,0.12); }
 .mermaid { overflow-x: auto; min-height: 100px; padding: 9px; text-align: center; border: 1px solid var(--border); border-radius: 9px; background: rgba(8,12,20,0.4); }
 .mermaid svg { max-width: 100%; height: auto; }
+.diagram-modal-backdrop { position: fixed; inset: 45px 0 0; z-index: 70; display: flex; padding: 12px; background: rgba(4,7,13,0.88); backdrop-filter: blur(5px); }
+.diagram-modal { display: flex; flex: 1; min-width: 0; min-height: 0; flex-direction: column; overflow: hidden; border: 1px solid #3a465f; border-radius: 12px; background: #151c2a; box-shadow: 0 18px 45px rgba(0,0,0,0.45); }
+.diagram-modal > header { display: flex; align-items: center; justify-content: space-between; flex: none; padding: 10px 13px; border-bottom: 1px solid var(--border); }
+.diagram-modal > header strong { font-size: 12px; }
+.diagram-modal > header button { display: grid; place-items: center; width: 28px; height: 28px; padding: 0; color: var(--muted); border: 0; border-radius: 6px; background: transparent; cursor: pointer; }
+.diagram-modal > header button:hover { color: white; background: rgba(255,255,255,0.07); }
+.diagram-modal-content { flex: 1; min-height: 0; overflow: auto; padding: 16px; }
+.diagram-modal-content .mermaid { min-width: max-content; min-height: 100%; padding: 0; text-align: left; border: 0; border-radius: 0; background: transparent; }
 .diagram-error { padding: 10px; color: var(--danger); font-size: 10px; line-height: 1.5; }
 .evidence { margin-top: 12px; overflow: hidden; border: 1px solid var(--border); border-radius: 8px; background: rgba(255,255,255,0.02); }
 .evidence summary { display: flex; align-items: center; gap: 6px; padding: 9px 10px; color: #c4cce0; font-size: 10px; cursor: pointer; }
