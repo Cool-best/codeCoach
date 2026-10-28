@@ -108,7 +108,7 @@ export function GuideView({ steps, session, workspacePath, busy, onCheck, onRelo
           <TabButton active={tab === "overview"} onClick={() => setTab("overview")} icon={<BookOpen size={14} />} label="指导" />
           {lines.length > 0 && <TabButton active={tab === "lines"} onClick={() => setTab("lines")} icon={<ListOrdered size={14} />} label="逐行" />}
           {step.content.sample && <TabButton active={tab === "sample"} onClick={() => setTab("sample")} icon={<Code2 size={14} />} label="样板" />}
-          {step.content.diagram && <TabButton active={tab === "diagram"} onClick={() => setTab("diagram")} icon={<Workflow size={14} />} label="时序" />}
+          {step.content.diagram && <TabButton active={tab === "diagram"} onClick={() => setTab("diagram")} icon={<Workflow size={14} />} label={/^(?:flowchart|graph)\b/.test(step.content.diagram.source.trimStart()) ? "流程" : "时序"} />}
         </div>
 
         <div className="tab-panel">

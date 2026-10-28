@@ -551,9 +551,16 @@ sequenceDiagram
 
 ## 第 7 步：加入 approval_gate 暂停与恢复
 
-在 `graph.py` 增加 `approval_gate` 和 `route_after_plan`，把 `plan → tools` 改成条件边。存在未决定的副作用时才进入审批。
+在 `graph.py` 增加 `approval_gate` 和 `route_after_plan`。`route_after_plan` 返回目标节点的字符串，LangGraph 再根据条件边映射选择下一条路径：存在未决定的副作用时进入审批，否则直接进入只读工具。
 
 核心规则：`interrupt()` 之前只能做确定性纯计算；MCP 永远留到 `tools`。恢复时节点会从函数开头重跑。
+
+在 `build_graph` 中同步完成四处修改，不能只添加两个函数：
+
+1. 用 `builder.add_node("approval_gate", approval_gate)` 注册审批节点。
+2. 删除第 6 步的 `builder.add_edge("plan", "tools")`，否则固定边会绕过条件判断。
+3. 用 `builder.add_conditional_edges("plan", route_after_plan, {"approval_gate": "approval_gate", "tools": "tools"})` 建立分支；字典左侧是路由函数的返回值，右侧是实际节点名。
+4. 增加 `builder.add_edge("approval_gate", "tools")`，让审批完成后的动作仍由 `tools` 执行。
 
 ```json coach
 {
@@ -561,22 +568,27 @@ sequenceDiagram
   "summary": "实现 M1 核心：副作用动作暂停，Command(resume) 后才写入 approvals",
   "prerequisites": ["verify-m0"],
   "next": ["validate-plan"],
-  "acceptance": ["实现 approval_gate", "interrupt 前没有 MCP", "pending 为空时不暂停", "plan 使用条件路由"],
+  "acceptance": ["实现 approval_gate", "interrupt 前没有 MCP", "pending 为空时不暂停", "plan 使用条件路由", "旧 plan 固定边已删除", "approval_gate 指向 tools"],
   "completion": {
     "all": [
       { "type": "file_contains", "path": "src/ops_copilot/graph.py", "pattern": "def approval_gate" },
       { "type": "file_contains", "path": "src/ops_copilot/graph.py", "pattern": "interrupt(payload)" },
       { "type": "file_contains", "path": "src/ops_copilot/graph.py", "pattern": "def route_after_plan" },
-      { "type": "file_contains", "path": "src/ops_copilot/graph.py", "pattern": "add_conditional_edges" }
+      { "type": "file_contains", "path": "src/ops_copilot/graph.py", "pattern": "add_conditional_edges" },
+      { "type": "file_contains", "path": "src/ops_copilot/graph.py", "pattern": "builder.add_node(\"approval_gate\", approval_gate)" },
+      { "type": "file_contains", "path": "src/ops_copilot/graph.py", "pattern": "builder.add_edge(\"approval_gate\", \"tools\")" },
+      { "not": { "type": "file_contains", "path": "src/ops_copilot/graph.py", "pattern": "builder.add_edge(\"plan\", \"tools\")" } }
     ]
   },
-  "hints": ["从 langgraph.types 导入 interrupt；decisions = interrupt(payload) 的返回值才是审批结果。", "条件边映射为 {'approval_gate': 'approval_gate', 'tools': 'tools'}，并把 approval_gate 指向 tools。"],
+  "hints": ["从 langgraph.types 导入 interrupt；decisions = interrupt(payload) 的返回值才是审批结果。", "条件边映射为 {'approval_gate': 'approval_gate', 'tools': 'tools'}；如果仍保留 plan → tools 固定边，副作用可能未经审批直接执行。"],
   "lineMode": [
     { "code": "pending = [a for a in state[\"proposed_actions\"] if a[\"effect\"] == \"side_effect\"]", "explanation": "先只筛选需要人审的动作，这是可重入纯计算。" },
     { "code": "decisions = interrupt(payload)", "explanation": "第一次暂停；恢复时返回 Command(resume=...) 的决定。" },
-    { "code": "return {\"approvals\": decisions, \"run_status\": \"running\"}", "explanation": "把人的决定写回 State，仍不能在这里调 MCP。" }
+    { "code": "return {\"approvals\": decisions, \"run_status\": \"running\"}", "explanation": "把人的决定写回 State，仍不能在这里调 MCP。" },
+    { "code": "builder.add_conditional_edges(\"plan\", route_after_plan, {\"approval_gate\": \"approval_gate\", \"tools\": \"tools\"})", "explanation": "用路由函数的字符串返回值选择审批或直接执行。" },
+    { "code": "builder.add_edge(\"approval_gate\", \"tools\")", "explanation": "审批节点只写决定，真正的工具调用仍集中在 tools。" }
   ],
-  "diagram": { "sourceId": "approval-flow", "highlightMessages": [2, 3, 4] }
+  "diagram": { "sourceId": "approval-flow", "highlightMessages": [] }
 }
 ```
 
@@ -604,18 +616,23 @@ def route_after_plan(state):
     decided = {d["action_id"] for d in state.get("approvals", [])}
     pending = [a for a in state["proposed_actions"] if a["effect"] == "side_effect" and a["action_id"] not in decided]
     return "approval_gate" if pending else "tools"
+
+builder.add_node("approval_gate", approval_gate)
+builder.add_conditional_edges("plan", route_after_plan, {
+    "approval_gate": "approval_gate",
+    "tools": "tools",
+})
+builder.add_edge("approval_gate", "tools")
 ```
 
 ```mermaid approval-flow
-sequenceDiagram
-  participant H as Host
-  participant A as approval_gate
-  participant C as Checkpointer
-  participant T as tools
-  H->>A: 有副作用的 State
-  A->>C: interrupt(payload) 并存档
-  H->>A: Command(resume=decisions)
-  A-->>T: approvals（此处仍未调 MCP）
+flowchart TD
+  P[plan] --> R{存在未决定的副作用？}
+  R -->|是| A[approval_gate]
+  A --> I[interrupt 保存暂停点]
+  I --> D[Command resume decisions]
+  D --> T[tools]
+  R -->|否| T
 ```
 
 ## 第 8 步：给模型输出加上策略闸门
