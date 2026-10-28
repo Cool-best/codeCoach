@@ -639,7 +639,7 @@ flowchart TD
 
 回到 `policy.py`，增加 `args_ok()` 和 `validate_plan()`。模型只能提议；host 负责白名单、参数、引用、effect 和 `action_id`。
 
-然后在 `graph.py` 的 `plan` 中调用 `validate_plan(model.plan(state), state)`，替换第 6 步写死的只读动作。
+然后在 `graph.py` 的 `plan` 中以 `validate_plan(model.plan(state), state, audit)` 三个参数完成接入，替换第 6 步写死的只读动作。下面的结构化修改说明会解释每个参数、返回值和副作用。
 
 ```json coach
 {
@@ -647,26 +647,94 @@ flowchart TD
   "summary": "落实 G5 与默认拒绝：未知工具、伪造 ref、非法参数都不能进入执行清单",
   "prerequisites": ["approval-gate"],
   "next": ["execute-approved"],
-  "acceptance": ["validate_plan 检查 TOOL_REGISTRY", "effect 由 host 查表", "ref_ids 必须是 offered_refs 子集", "action_id 由 host 生成"],
+  "acceptance": ["validate_plan 检查 TOOL_REGISTRY", "effect 由 host 查表", "ref_ids 必须是 offered_refs 子集", "action_id 由 host 生成", "graph.py 的 plan 已接入三参数 validate_plan", "每轮清空 approvals 并设置 deadline_at"],
   "completion": {
     "all": [
+      { "type": "file_contains", "path": "src/ops_copilot/policy.py", "pattern": "def args_ok" },
       { "type": "file_contains", "path": "src/ops_copilot/policy.py", "pattern": "def validate_plan" },
       { "type": "file_contains", "path": "src/ops_copilot/policy.py", "pattern": "TOOL_REGISTRY" },
       { "type": "file_contains", "path": "src/ops_copilot/policy.py", "pattern": "offered_refs" },
-      { "type": "file_contains", "path": "src/ops_copilot/policy.py", "pattern": "action_id" }
+      { "type": "file_contains", "path": "src/ops_copilot/policy.py", "pattern": "action_id" },
+      { "type": "file_contains", "path": "src/ops_copilot/graph.py", "pattern": "from ops_copilot.policy import validate_plan" },
+      { "type": "file_contains", "path": "src/ops_copilot/graph.py", "pattern": "def plan(state):" },
+      { "type": "file_contains", "path": "src/ops_copilot/graph.py", "pattern": "validate_plan(model.plan(state), state, audit)" },
+      { "type": "file_contains", "path": "src/ops_copilot/graph.py", "pattern": "\"proposed_actions\": actions" },
+      { "type": "file_contains", "path": "src/ops_copilot/graph.py", "pattern": "\"approvals\": []" },
+      { "type": "file_contains", "path": "src/ops_copilot/graph.py", "pattern": "\"deadline_at\": deadline_at" }
     ]
   },
-  "hints": ["用 from ulid import ULID，action_id 可写成 str(ULID())。", "calendar.hold 只允许 P1 且 classification 不是 unknown；ticket_id 必须等于当前工单。"]
+  "edits": [
+    {
+      "path": "src/ops_copilot/policy.py",
+      "summary": "新增两个纯策略函数，把不可信的模型动作转换为 host 认可的执行清单。",
+      "instructions": [
+        "先用 args_ok 按工具白名单校验参数形状，并拒绝 token、password、secret 字段。",
+        "validate_plan 每轮最多读取三个候选动作，检查工具、参数和引用；effect 与 action_id 不采用模型提供的值。",
+        "被拒绝或降级的动作通过 audit 回调记录，不进入返回清单。"
+      ],
+      "functions": [
+        {
+          "name": "args_ok",
+          "signature": "args_ok(name: str, args: dict) -> bool",
+          "purpose": "判断某个工具的参数是否满足 host 的最小安全契约。",
+          "parameters": [
+            { "name": "name", "type": "str", "description": "模型提议的工具名，必须能在 TOOL_REGISTRY 中找到。" },
+            { "name": "args", "type": "dict", "description": "模型提议的参数字典；按工具检查 query、ticket_id 或 minutes。" }
+          ],
+          "returns": "参数允许使用时返回 True；未知工具、敏感字段或参数不合法时返回 False。",
+          "sideEffects": "无；不修改 State，不调用 MCP。"
+        },
+        {
+          "name": "validate_plan",
+          "signature": "validate_plan(raw: dict, state: dict, audit: Callable[..., None]) -> list[dict]",
+          "purpose": "过滤模型计划并生成规范化动作，落实默认拒绝、引用完整性和 host 控制的 effect/action_id。",
+          "parameters": [
+            { "name": "raw", "type": "dict", "description": "model.plan 的原始返回，候选清单位于 actions 字段。" },
+            { "name": "state", "type": "dict", "description": "当前 State，用于核对 offered_refs、classification、severity 和 ticket_id。" },
+            { "name": "audit", "type": "Callable[..., None]", "description": "由 graph 注入的审计回调，接收事件 code 和工具名、原因等关键字详情。" }
+          ],
+          "returns": "只包含通过策略检查的动作列表；每项由 host 重新生成 action_id 并查表设置 effect。",
+          "sideEffects": "为被拒绝或降级的动作调用 audit，并生成新的 ULID；不直接执行工具。"
+        }
+      ],
+      "requiredPatterns": ["def args_ok", "def validate_plan", "TOOL_REGISTRY", "offered_refs", "action_id"]
+    },
+    {
+      "path": "src/ops_copilot/graph.py",
+      "summary": "把 plan 的固定只读动作替换为策略校验后的动作，并保留审计与每轮审批状态。",
+      "instructions": [
+        "从 ops_copilot.policy 导入 validate_plan。",
+        "在 build_graph 闭包的 plan 内定义 audit(code, **detail)，把事件追加到本轮 audit_entries。",
+        "用原始模型计划、当前 State 和 audit 三个参数调用 validate_plan，不能遗漏第三个参数。",
+        "返回 proposed_actions=actions、空 approvals、递增 round_no、deadline_at 和 audit_entries；MCP 调用仍留在 tools。"
+      ],
+      "functions": [
+        {
+          "name": "plan",
+          "signature": "plan(state: OpsTicketState) -> dict",
+          "purpose": "把模型提议转换为经过 host 策略校验的 State 更新。",
+          "parameters": [
+            { "name": "state", "type": "OpsTicketState", "description": "当前图状态，同时传给模型和策略闸门。" }
+          ],
+          "returns": "包含 proposed_actions、approvals、round_no、deadline_at 和 audit 的 State 部分更新。",
+          "sideEffects": "调用模型规划函数和 audit 回调；不直接调用 MCP。"
+        }
+      ],
+      "requiredPatterns": ["from ops_copilot.policy import validate_plan", "def plan(state):", "validate_plan(model.plan(state), state, audit)", "\"proposed_actions\": actions", "\"approvals\": []", "\"deadline_at\": deadline_at"]
+    }
+  ],
+  "hints": ["用 from ulid import ULID，action_id 可写成 str(ULID())。", "calendar.hold 只允许 P1 且 classification 不是 unknown；ticket_id 必须等于当前工单。", "validate_plan 需要 raw、state、audit 三个参数；只复制 policy.py 而不修改 graph.py 不能通过本步检查。"]
 }
 ```
 
 ```python
+from collections.abc import Callable
 from ulid import ULID
 from ops_copilot.state import TOOL_REGISTRY
 
 FORBIDDEN_KEYS = {"token", "password", "secret"}
 
-def args_ok(name, args):
+def args_ok(name: str, args: dict) -> bool:
     if not isinstance(args, dict) or FORBIDDEN_KEYS.intersection(args):
         return False
     if name == "kb.search":
@@ -677,7 +745,7 @@ def args_ok(name, args):
         return isinstance(args.get("minutes"), int) and 1 <= args["minutes"] <= 480
     return False
 
-def validate_plan(raw, state, audit):
+def validate_plan(raw: dict, state: dict, audit: Callable[..., None]) -> list[dict]:
     output = []
     offered = set(state["offered_refs"])
     for item in (raw.get("actions") or [])[:3]:
@@ -707,7 +775,32 @@ def validate_plan(raw, state, audit):
     return output
 ```
 
-`validate_plan` 的 `audit` 参数是一个追加审计的函数，由 graph 注入。每轮 `plan` 还要清空 `approvals`、替换 `proposed_actions` 并设置 `deadline_at`。
+把 datetime 导入放在 `graph.py` 顶部，并用下面的实现替换 `build_graph` 闭包中原有的 `plan`；示例展示的是闭包内的逻辑，不是新的顶层图构建函数。
+
+```python
+from datetime import datetime, timedelta, timezone
+from ops_copilot.policy import validate_plan
+
+def plan(state):
+    audit_entries = []
+
+    def audit(code, **detail):
+        audit_entries.append({
+            "ts": datetime.now(timezone.utc).isoformat(),
+            "code": code,
+            **detail,
+        })
+
+    actions = validate_plan(model.plan(state), state, audit)
+    deadline_at = (datetime.now(timezone.utc) + timedelta(minutes=10)).isoformat()
+    return {
+        "proposed_actions": actions,
+        "approvals": [],
+        "round_no": state["round_no"] + 1,
+        "deadline_at": deadline_at,
+        "audit": audit_entries,
+    }
+```
 
 ## 第 9 步：只执行只读或已批准动作
 

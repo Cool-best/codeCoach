@@ -34,6 +34,13 @@ function hasContentRule(condition) {
   return false;
 }
 
+function requiredContentRules(condition) {
+  if (!condition) return [];
+  if ("type" in condition) return condition.type === "file_contains" ? [condition] : [];
+  if ("all" in condition) return condition.all.flatMap(requiredContentRules);
+  return [];
+}
+
 async function lint(file) {
   const issues = [];
   let tutorial;
@@ -49,6 +56,18 @@ async function lint(file) {
     if (!step.content.sample?.code) issues.push(issue("warning", "teaching.sample", step.id, "缺少最小代码样板"));
     if (step.content.hints.length === 0) issues.push(issue("warning", "teaching.hints", step.id, "没有失败提示"));
     if (!hasContentRule(step.completion)) issues.push(issue("warning", "verification.weak-rule", step.id, "只有文件存在检查，无法证明关键实现已写入"));
+    const requiredRules = requiredContentRules(step.completion);
+    for (const edit of step.edits ?? []) {
+      const editRules = requiredRules.filter((rule) => rule.path === edit.path);
+      if (editRules.length === 0) {
+        issues.push(issue("error", "verification.missing-edit-file", step.id, `声明修改 ${edit.path}，但 completion 没有该文件的必需内容规则`));
+      }
+      for (const pattern of edit.requiredPatterns) {
+        if (!editRules.some((rule) => rule.pattern === pattern)) {
+          issues.push(issue("error", "verification.missing-edit-pattern", step.id, `${edit.path} 缺少必需的验收文本：${pattern}`));
+        }
+      }
+    }
     if (step.content.sample && /(?:\bTODO\b|if\s+False)/.test(step.content.sample.code)) {
       issues.push(issue("error", "sample.placeholder", step.id, "样板包含 TODO 或 if False，不能作为可靠实现"));
     }

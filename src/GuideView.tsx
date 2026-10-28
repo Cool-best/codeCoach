@@ -115,6 +115,23 @@ export function GuideView({ steps, session, workspacePath, busy, onCheck, onRelo
           {tab === "overview" && (
             <div className="overview">
               <div className="markdown" dangerouslySetInnerHTML={{ __html: step.content.markdown }} />
+              {step.edits?.map((edit) => (
+                <section className="edit-guide" key={edit.path}>
+                  <h3>修改 <code>{edit.path}</code></h3>
+                  <p>{edit.summary}</p>
+                  <ol>{edit.instructions.map((instruction) => <li key={instruction}>{instruction}</li>)}</ol>
+                  {edit.functions.map((fn) => (
+                    <article className="function-contract" key={fn.name}>
+                      <h4>{fn.name}</h4>
+                      <code className="function-signature">{fn.signature}</code>
+                      <p>{fn.purpose}</p>
+                      <ul>{fn.parameters.map((parameter) => <li key={parameter.name}><code>{parameter.name}: {parameter.type}</code> — {parameter.description}</li>)}</ul>
+                      <p><strong>返回：</strong>{fn.returns}</p>
+                      <p><strong>副作用：</strong>{fn.sideEffects}</p>
+                    </article>
+                  ))}
+                </section>
+              ))}
               {step.content.hints.map((hint, index) => (
                 <details className="hint" key={hint}>
                   <summary>需要一点提示？{step.content.hints.length > 1 ? ` ${index + 1}` : ""}</summary>

@@ -131,6 +131,16 @@ button:disabled { opacity: 0.42; cursor: not-allowed !important; }
 .markdown pre { overflow-x: auto; padding: 10px; border-radius: 8px; background: #0d111b; }
 .markdown pre code { padding: 0; background: none; }
 .markdown a { color: #9bb0ff; }
+.edit-guide { margin-top: 12px; padding: 11px; border: 1px solid var(--border); border-radius: 8px; background: rgba(130,156,255,0.035); }
+.edit-guide > h3 { margin: 0 0 7px; color: #dce4f7; font-size: 12px; }
+.edit-guide > h3 code { overflow-wrap: anywhere; color: #bdcaff; font-family: Consolas, monospace; font-size: 10px; }
+.edit-guide > p, .function-contract p { color: var(--muted); font-size: 10px; line-height: 1.65; }
+.edit-guide > ol { margin: 8px 0; padding-left: 19px; color: #b7c1d5; font-size: 10px; line-height: 1.7; }
+.function-contract { margin-top: 9px; padding: 9px; border-radius: 7px; background: rgba(7,12,21,0.45); }
+.function-contract h4 { margin: 0 0 6px; color: #dce4f7; font-size: 11px; }
+.function-signature { display: block; overflow-x: auto; padding: 6px; color: #cdd8ff; font-family: Consolas, monospace; font-size: 9px; white-space: nowrap; }
+.function-contract ul { margin: 7px 0; padding-left: 17px; color: #b7c1d5; font-size: 9px; line-height: 1.7; }
+.function-contract ul code { color: #bdcaff; font-family: Consolas, monospace; }
 .hint { margin-top: 8px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 7px; background: rgba(255,255,255,0.02); }
 .hint summary { color: #c1c9da; font-size: 10px; cursor: pointer; }
 .hint p { margin: 7px 0 1px; color: var(--muted); font-size: 10px; line-height: 1.6; user-select: text; }

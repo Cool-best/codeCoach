@@ -12,6 +12,37 @@
 - 必要的 `hints`、`lineMode` 和最小代码样板。
 - 阶段验收所需的结构化 `verification`。
 
+### 1.1 用 `edits` 声明文件修改和函数契约
+
+需要指导用户修改多个文件或实现新函数时，在步骤的 `json coach` 中增加 `edits`。应用会把这些结构化字段渲染为可读指导，作者不需要在正文重复维护同一套函数说明。
+
+```json
+{
+  "edits": [
+    {
+      "path": "src/example.py",
+      "summary": "接入策略校验",
+      "instructions": ["在现有函数中调用 validate，并替换原返回值。"],
+      "functions": [
+        {
+          "name": "validate",
+          "signature": "validate(raw: dict) -> bool",
+          "purpose": "拒绝不符合策略的输入。",
+          "parameters": [
+            { "name": "raw", "type": "dict", "description": "待校验的原始输入。" }
+          ],
+          "returns": "输入合法时为 True，否则为 False。",
+          "sideEffects": "无；不执行外部调用。"
+        }
+      ],
+      "requiredPatterns": ["def validate", "validate(raw)"]
+    }
+  ]
+}
+```
+
+`path` 使用工作区内的正斜杠相对路径。每个 `requiredPatterns` 都必须在 `completion.all` 中以同文件、同文本的 `file_contains` 规则出现；不能只写在 `any` 或 `not` 中。lint 会对缺失文件和缺失文本报硬错误，避免正文要求修改某文件而验收漏掉它。文本规则仍只证明代码存在，不等于运行测试通过。
+
 ## 2. 结构化验收
 
 当前版本不自动执行命令。`verification` 用于向用户展示真实工作区、可复制命令和预期输出，并辅助错误定位。
@@ -73,7 +104,7 @@ npm run guide:lint -- --strict examples/ops-copilot-langgraph.guide.md
 - 低于 80 分或存在硬错误时命令返回非零。
 - `--strict` 下任何警告也返回非零。
 
-当前检查包括协议解析、步骤完整性、弱文件规则、危险占位写法、错误工具消息、阶段验收缺失、Python 模块路径不一致和手动验收说明。
+当前检查包括协议解析、步骤完整性、弱文件规则、`edits` 声明与跨文件验收一致性、危险占位写法、错误工具消息、阶段验收缺失、Python 模块路径不一致和手动验收说明。
 
 分数用于比较和发现问题，不能证明教程可运行。发布前仍必须在干净目录原样执行官方 demo 和测试。
 

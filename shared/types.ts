@@ -35,6 +35,23 @@ export interface Verification {
   manual: boolean;
 }
 
+export interface FunctionGuidance {
+  name: string;
+  signature: string;
+  purpose: string;
+  parameters: Array<{ name: string; type: string; description: string }>;
+  returns: string;
+  sideEffects: string;
+}
+
+export interface StepEdit {
+  path: string;
+  summary: string;
+  instructions: string[];
+  functions: FunctionGuidance[];
+  requiredPatterns: string[];
+}
+
 export interface StepContent {
   markdown: string;
   hints: string[];
@@ -52,6 +69,7 @@ export interface TutorialStep {
   acceptance: string[];
   completion?: Condition;
   verification?: Verification;
+  edits?: StepEdit[];
   content: StepContent;
 }
 

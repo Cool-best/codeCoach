@@ -71,6 +71,32 @@ const verificationSchema = z
   })
   .strict();
 
+const editSchema = z.object({
+  path: z.string().min(1).max(500).refine(
+    (value) =>
+      !value.includes("\\") &&
+      !path.posix.isAbsolute(value) &&
+      !path.win32.isAbsolute(value) &&
+      !value.split("/").includes(".."),
+    "修改路径必须是工作区内的正斜杠相对路径",
+  ),
+  summary: z.string().min(1).max(1000),
+  instructions: z.array(z.string().min(1).max(2000)).min(1).max(30),
+  functions: z.array(z.object({
+    name: z.string().min(1).max(200),
+    signature: z.string().min(1).max(1000),
+    purpose: z.string().min(1).max(2000),
+    parameters: z.array(z.object({
+      name: z.string().min(1).max(200),
+      type: z.string().min(1).max(200),
+      description: z.string().min(1).max(1000),
+    }).strict()).max(50),
+    returns: z.string().min(1).max(2000),
+    sideEffects: z.string().min(1).max(1000).default("无"),
+  }).strict()).max(20).default([]),
+  requiredPatterns: z.array(z.string().min(1).max(20_000)).min(1).max(100),
+}).strict();
+
 const stepSchema = z
   .object({
     id: z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/).max(100),
@@ -80,6 +106,7 @@ const stepSchema = z
     acceptance: z.array(z.string()).default([]),
     completion: conditionSchema.optional(),
     verification: verificationSchema.optional(),
+    edits: z.array(editSchema).max(100).optional(),
     hints: z.array(z.string()).default([]),
     sample: z
       .object({
@@ -219,6 +246,7 @@ function parseStep(
     acceptance: metadata.acceptance,
     completion: metadata.completion,
     verification: metadata.verification,
+    edits: metadata.edits,
     content: {
       markdown: markdown.renderer.render(contentTokens, markdown.options, {}),
       hints: metadata.hints,
