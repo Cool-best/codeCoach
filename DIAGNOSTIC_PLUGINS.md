@@ -10,6 +10,8 @@ CodeCoach 支持单文件 `.coachdiag` 诊断插件。插件只包含声明式�
 2. 用户目录 `%APPDATA%\CodeCoach\diagnostics\plugins` 下的 `.coachdiag` 或 `.json` 文件。
 3. 按 `priority` 从高到低匹配，最后使用内置诊断作为降级。
 
+首次启动时，应用会把内置插件预置到用户目录；同名文件已经存在时不会覆盖，因此升级应用不会抹掉用户修改。加载时，用户目录中的同 ID 规则覆盖内置副本，其他规则仍按 `priority` 匹配。
+
 修改插件后，下一次分析就会重新加载，无需重启或重新打包。无效插件会被忽略并记录警告，不影响内置规则。
 
 当前插件是**声明式规则包**，适合做错误签名、条件匹配、修复文案和命令模板。新的文件探针、网络请求或 Python 环境探测仍需要宿主提供安全能力，插件不能自行执行这些操作。
@@ -58,7 +60,7 @@ CodeCoach 支持单文件 `.coachdiag` 诊断插件。插件只包含声明式�
 
 ## 3. 安装或更新插件
 
-PowerShell：
+内置插件无需手动安装，首次启动后可在上述用户目录直接查看和调整。安装第三方插件时使用 PowerShell：
 
 ```powershell
 $pluginDir = "$env:APPDATA\CodeCoach\diagnostics\plugins"

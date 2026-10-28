@@ -1,5 +1,6 @@
 import path from "node:path";
-import { readdir, readFile } from "node:fs/promises";
+import { constants } from "node:fs";
+import { copyFile, mkdir, readdir, readFile } from "node:fs/promises";
 import { z } from "zod";
 import type { ErrorDiagnosis } from "../../shared/types";
 import { diagnoseError, type DiagnosticContext } from "./diagnostics";
@@ -32,20 +33,33 @@ interface PluginOptions {
   pluginDirectory: string;
 }
 
+export async function seedDiagnosticPlugins(options: PluginOptions): Promise<void> {
+  await mkdir(options.pluginDirectory, { recursive: true });
+  for (const source of await pluginFilesIn(options.builtInDirectory)) {
+    const destination = path.join(options.pluginDirectory, path.basename(source));
+    try {
+      await copyFile(source, destination, constants.COPYFILE_EXCL);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+    }
+  }
+}
+
 export async function diagnoseWithPlugins(
   errorText: string,
   context: DiagnosticContext,
   options: PluginOptions,
 ): Promise<ErrorDiagnosis> {
-  const rules: DiagnosticRule[] = [];
+  const rulesById = new Map<string, DiagnosticRule>();
   for (const file of await pluginFiles(options)) {
     try {
       const plugin = pluginSchema.parse(JSON.parse(await readFile(file, "utf8")));
-      rules.push(...plugin.rules);
+      for (const rule of plugin.rules) rulesById.set(rule.id, rule);
     } catch (error) {
       console.warn(`忽略无效诊断插件 ${file}`, error);
     }
   }
+  const rules = Array.from(rulesById.values());
   rules.sort((left, right) => right.priority - left.priority);
 
   for (const rule of rules) {
@@ -71,18 +85,22 @@ export async function diagnoseWithPlugins(
 async function pluginFiles(options: PluginOptions): Promise<string[]> {
   const files: string[] = [];
   for (const directory of [options.builtInDirectory, options.pluginDirectory]) {
-    try {
-      const entries = await readdir(directory, { withFileTypes: true });
-      for (const entry of entries) {
-        if (entry.isFile() && /(?:\.coachdiag|\.json)$/i.test(entry.name)) {
-          files.push(path.join(directory, entry.name));
-        }
-      }
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
-    }
+    files.push(...await pluginFilesIn(directory));
   }
   return files;
+}
+
+async function pluginFilesIn(directory: string): Promise<string[]> {
+  try {
+    const entries = await readdir(directory, { withFileTypes: true });
+    return entries
+      .filter((entry) => entry.isFile() && /(?:\.coachdiag|\.json)$/i.test(entry.name))
+      .sort((left, right) => left.name.localeCompare(right.name))
+      .map((entry) => path.join(directory, entry.name));
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
+    throw error;
+  }
 }
 
 function isOutsideWorkspace(context: DiagnosticContext): boolean {

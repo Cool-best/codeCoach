@@ -5,7 +5,7 @@ import { z } from "zod";
 import type { ApiResult, AppSettings, Bootstrap } from "../../shared/types";
 import { CoachService } from "./session";
 import { LocalStore } from "./store";
-import { diagnoseWithPlugins } from "./diagnostic-plugins";
+import { diagnoseWithPlugins, seedDiagnosticPlugins } from "./diagnostic-plugins";
 import { FeedbackStore } from "./feedback";
 
 let mainWindow: BrowserWindow | undefined;
@@ -173,7 +173,7 @@ async function diagnoseSessionError(sessionId: string, errorText: string, curren
     moduleFileExists: await moduleFileExists(context.workspace.path, context.step.verification?.moduleFile),
   }, {
     builtInDirectory: path.join(app.getAppPath(), "resources/diagnostics"),
-    pluginDirectory: path.join(app.getPath("userData"), "diagnostics/plugins"),
+    pluginDirectory: path.join(app.getPath("appData"), "CodeCoach/diagnostics/plugins"),
   });
 }
 
@@ -310,6 +310,10 @@ if (!hasSingleInstanceLock) {
     store = new LocalStore(app.getPath("userData"));
     feedbackStore = new FeedbackStore(app.getPath("userData"));
     await Promise.all([store.init(), feedbackStore.init()]);
+    await seedDiagnosticPlugins({
+      builtInDirectory: path.join(app.getAppPath(), "resources/diagnostics"),
+      pluginDirectory: path.join(app.getPath("appData"), "CodeCoach/diagnostics/plugins"),
+    });
     service = new CoachService(store, (event) => mainWindow?.webContents.send("session:event", event));
     registerIpc();
     await createWindow();
