@@ -1,0 +1,76 @@
+{
+  "name": "code-coach",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A local-first, evidence-driven Windows coding coach",
+  "main": "dist-electron/electron/main/index.js",
+  "author": "CodeCoach contributors",
+  "license": "MIT",
+  "scripts": {
+    "dev": "concurrently -k -n renderer,desktop \"npm:dev:renderer\" \"npm:dev:desktop\"",
+    "dev:renderer": "vite --host 127.0.0.1",
+    "dev:desktop": "npm run build:main && wait-on -t 30000 http-get://127.0.0.1:5173/ && electron .",
+    "build:main": "tsc -p tsconfig.electron.json",
+    "build:renderer": "vite build",
+    "build": "npm run typecheck && npm run build:main && npm run build:renderer",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.electron.json --noEmit",
+    "guide:lint": "npm run build:main && node scripts/lint-guide.cjs",
+    "diagnostics:pack": "node scripts/package-diagnostic-plugin.cjs",
+    "start": "electron .",
+    "dist": "npm run build && electron-builder --win nsis --x64",
+    "dist:signed": "npm run build && electron-builder --win nsis --x64 --config.win.signAndEditExecutable=true"
+  },
+  "dependencies": {
+    "chokidar": "^4.0.3",
+    "gray-matter": "^4.0.3",
+    "highlight.js": "^11.11.1",
+    "lucide-react": "^0.468.0",
+    "markdown-it": "^14.1.0",
+    "mermaid": "^12.2.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/markdown-it": "^14.1.2",
+    "@types/node": "^22.10.2",
+    "@types/react": "^19.0.2",
+    "@types/react-dom": "^19.0.2",
+    "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^9.1.2",
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.5",
+    "wait-on": "^8.0.1"
+  },
+  "build": {
+    "appId": "dev.codecoach.desktop",
+    "productName": "CodeCoach",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist-electron/**/*",
+      "dist/renderer/**/*",
+      "resources/**/*",
+      "package.json"
+    ],
+    "asarUnpack": [
+      "dist-electron/**/*.node"
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "resources/icon.png",
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  }
+}

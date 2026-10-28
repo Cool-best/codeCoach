@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 1,
+  "pluginId": "codecoach.python-modules",
+  "version": "1.1.0",
+  "rules": [
+    {
+      "id": "python.module.file-missing",
+      "priority": 100,
+      "errorPattern": "ModuleNotFoundError: No module named",
+      "flags": "i",
+      "moduleFileExists": false,
+      "category": "working_directory",
+      "title": "验收模块文件不存在或位置不一致",
+      "summary": "当前工作区没有找到 {{moduleFile}}。先核对文件位置，不要重新安装依赖。",
+      "actions": [
+        "确认文件存在于 {{moduleFile}}",
+        "检查包目录、文件名、扩展名以及是否误放到项目根目录",
+        "文件位置修正后重新运行验收"
+      ],
+      "suggestedCommands": ["{{cdCommand}}", "{{command}}"]
+    },
+    {
+      "id": "python.module.src-path",
+      "priority": 90,
+      "errorPattern": "ModuleNotFoundError: No module named",
+      "flags": "i",
+      "cwd": "workspace",
+      "moduleFileExists": true,
+      "category": "dependency",
+      "title": "源码文件存在，但 src 未进入模块搜索路径",
+      "summary": "{{moduleFile}} 已存在，且当前位于项目根目录。python -m 不会自动把 src 加入 sys.path；优先检查 editable 安装是否完成或生效。",
+      "actions": [
+        "在当前虚拟环境中执行 editable 安装，并确认命令没有报错",
+        "用 python -m pip show ops-copilot 检查安装是否属于当前 Python",
+        "临时验证可在 PowerShell 设置 $env:PYTHONPATH = \"$PWD\\src\" 后重跑；正式使用仍建议 editable 安装"
+      ],
+      "suggestedCommands": ["{{cdCommand}}", "python -m pip install -e \".[dev]\"", "{{command}}"]
+    },
+    {
+      "id": "python.module.cwd",
+      "priority": 80,
+      "errorPattern": "ModuleNotFoundError: No module named",
+      "flags": "i",
+      "cwd": "outside_workspace",
+      "moduleFileExists": true,
+      "category": "working_directory",
+      "title": "运行目录导致找不到模块",
+      "summary": "你在 {{currentDirectory}} 中运行，而不是项目根目录 {{workspace}}。先改目录，不要先改业务代码。",
+      "actions": [
+        "返回项目根目录 {{workspace}}",
+        "使用模块方式重新运行 {{command}}",
+        "如果根目录仍报同样错误，再检查 editable 安装"
+      ],
+      "suggestedCommands": ["{{cdCommand}}", "{{command}}"]
+    },
+    {
+      "id": "python.module.install",
+      "priority": 60,
+      "errorPattern": "ModuleNotFoundError: No module named",
+      "flags": "i",
+      "category": "dependency",
+      "title": "项目包或依赖尚未正确安装",
+      "summary": "当前缺少足够的文件证据，先确认工作区、editable 安装和 Python 包发现配置。",
+      "actions": [
+        "确认终端位于项目根目录 {{workspace}}",
+        "在已激活的虚拟环境中重新安装当前项目的 editable 包",
+        "仍失败时检查 pyproject.toml 的包发现和 pythonpath 配置"
+      ],
+      "suggestedCommands": ["{{cdCommand}}", "python -m pip install -e \".[dev]\"", "{{command}}"]
+    },
+    {
+      "id": "langchain.tool-message.id",
+      "priority": 70,
+      "errorPattern": "KeyError:\\s*['\"]tool_call_id['\"]",
+      "flags": "i",
+      "category": "message_schema",
+      "title": "工具消息缺少 tool_call_id",
+      "summary": "add_messages 正在构造 ToolMessage，但消息中没有必填的工具调用 ID。问题在 tools 节点的返回结构。",
+      "actions": [
+        "从 langchain_core.messages 导入 ToolMessage",
+        "把 (\"tool\", ...) 二元组改为 ToolMessage(content=..., tool_call_id=...)",
+        "M0 可使用 read-1；多动作时使用对应 action_id，然后重新运行验收"
+      ],
+      "suggestedCommands": ["{{cdCommand}}", "{{command}}"]
+    },
+    {
+      "id": "python.assertion",
+      "priority": 40,
+      "errorPattern": "AssertionError",
+      "flags": "i",
+      "category": "assertion",
+      "title": "程序已运行，但结果不符合验收断言",
+      "summary": "这通常不是模块安装问题。需要定位第一个失败的 assert，比较实际状态、调用次数或消息数量。",
+      "actions": [
+        "向上找到 demo 或测试中第一个失败断言行",
+        "打印该断言左右的实际值，不要删除断言",
+        "修复后重新运行同一验收命令"
+      ],
+      "suggestedCommands": ["{{cdCommand}}", "{{command}}"]
+    }
+  ]
+}
