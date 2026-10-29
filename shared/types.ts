@@ -98,6 +98,7 @@ export interface CheckEvidence {
   status: "passed" | "failed" | "unknown";
   message: string;
   path?: string;
+  expected?: string;
   observedAt: string;
 }
 

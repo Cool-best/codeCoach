@@ -69,8 +69,21 @@ export class WorkspaceMonitor {
       return "unknown";
     }
     if ("not" in condition) {
-      const result = await this.evaluate(condition.not, `${rulePrefix}.not`, evidence);
-      return result === "passed" ? "failed" : result === "failed" ? "passed" : "unknown";
+      const childEvidence: CheckEvidence[] = [];
+      const result = await this.evaluate(condition.not, `${rulePrefix}.not`, childEvidence);
+      const observed = childEvidence.at(-1);
+      const location = observed?.path ?? rulePrefix;
+      const expected = observed?.expected ? `：${preview(observed.expected)}` : "";
+      if (result === "passed") {
+        evidence.push(this.evidence(`${rulePrefix}.not`, "failed", `发现不应存在的内容或条件：${location}${expected}`, observed?.path, observed?.expected));
+        return "failed";
+      }
+      if (result === "failed") {
+        evidence.push(this.evidence(`${rulePrefix}.not`, "passed", `未发现禁止的内容或条件：${location}${expected}`, observed?.path, observed?.expected));
+        return "passed";
+      }
+      evidence.push(this.evidence(`${rulePrefix}.not`, "unknown", `无法判断禁止条件：${location}`, observed?.path, observed?.expected));
+      return "unknown";
     }
     return this.checkRule(condition, rulePrefix, evidence);
   }
@@ -98,12 +111,14 @@ export class WorkspaceMonitor {
       }
       const source = await readFile(filePath, "utf8");
       const passed = source.includes(rule.pattern!);
+      const expected = preview(rule.pattern!);
       evidence.push(
         this.evidence(
           id,
           passed ? "passed" : "failed",
-          passed ? `内容检查通过：${rule.path}` : `未在 ${rule.path} 中找到预期内容`,
+          passed ? `内容检查通过：${rule.path}；预期文本：${expected}` : `未在 ${rule.path} 中找到预期内容：${expected}`,
           rule.path,
+          rule.pattern,
         ),
       );
       return passed ? "passed" : "failed";
@@ -154,7 +169,13 @@ export class WorkspaceMonitor {
     status: CheckEvidence["status"],
     message: string,
     filePath?: string,
+    expected?: string,
   ): CheckEvidence {
-    return { ruleId, status, message, path: filePath, observedAt: new Date().toISOString() };
+    return { ruleId, status, message, path: filePath, expected, observedAt: new Date().toISOString() };
   }
+}
+
+function preview(pattern: string): string {
+  const normalized = pattern.replace(/\s+/g, " ").trim();
+  return normalized.length > 160 ? `${normalized.slice(0, 157)}...` : normalized;
 }

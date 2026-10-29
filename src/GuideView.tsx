@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import hljs from "highlight.js/lib/common";
 import {
   BookOpen,
@@ -53,6 +53,7 @@ export function GuideView({ steps, session, workspacePath, busy, onCheck, onRelo
   const [reasonAction, setReasonAction] = useState<"skip" | "mark_completed" | null>(null);
   const [reason, setReason] = useState("");
   const [copied, setCopied] = useState(false);
+  const evidenceRef = useRef<HTMLDivElement>(null);
   const stepIndex = Math.max(0, steps.findIndex((item) => item.id === session.currentStepId));
   const step = steps[stepIndex]!;
   const nextStep = steps.find((item) => item.id === session.nextStepIds[0]);
@@ -65,6 +66,12 @@ export function GuideView({ steps, session, workspacePath, busy, onCheck, onRelo
     setLineIndex(0);
     setMenuOpen(false);
   }, [step.id]);
+
+  useEffect(() => {
+    if (session.lastReport && session.lastReport.status !== "passed") {
+      evidenceRef.current?.scrollIntoView({ block: "nearest" });
+    }
+  }, [session.lastReport]);
 
   const runReasonAction = (): void => {
     if (!reasonAction || !reason.trim()) return;
@@ -100,6 +107,10 @@ export function GuideView({ steps, session, workspacePath, busy, onCheck, onRelo
           {step.acceptance.length > 0 ? (
             <ul>{step.acceptance.map((item) => <li key={item}>{item}</li>)}</ul>
           ) : <p>按照下方说明操作，然后由你确认结果。</p>}
+        </div>
+
+        <div ref={evidenceRef} className="evidence-anchor">
+          {session.lastReport && <Evidence report={session.lastReport} />}
         </div>
 
         {step.verification && <VerificationCard verification={step.verification} workspacePath={workspacePath} onFeedback={onFeedback} />}
@@ -178,8 +189,6 @@ export function GuideView({ steps, session, workspacePath, busy, onCheck, onRelo
           )}
         </div>
 
-        {session.lastReport && <Evidence report={session.lastReport} />}
-
         {session.currentStatus === "completed" && nextStep && (
           <div className="next-preview">
             <span>下一步</span>
@@ -238,21 +247,42 @@ function TabButton({ active, onClick, icon, label }: { active: boolean; onClick:
 }
 
 function Evidence({ report }: { report: CheckReport }) {
+  const problems = report.evidence.filter((item) => item.status !== "passed");
+  const passed = report.evidence.filter((item) => item.status === "passed");
+  const summary = report.status === "passed"
+    ? "检查通过 · 查看证据"
+    : report.status === "unknown"
+      ? `${problems.length} 项待确认 · 查看原因`
+      : report.status === "cancelled"
+        ? "检查已取消 · 查看详情"
+        : `${problems.length} 项未通过 · 查看失败原因`;
   return (
     <details className={`evidence evidence-${report.status}`} open={report.status !== "passed"}>
       <summary>
         {report.status === "passed" ? <CheckCircle2 size={15} /> : <XCircle size={15} />}
-        {report.status === "passed" ? "检查通过 · 查看证据" : report.status === "unknown" ? "暂时无法自动判断" : "还没有达到完成条件"}
+        {summary}
       </summary>
-      <ul>
-        {report.evidence.map((item, index) => (
-          <li key={`${item.ruleId}-${index}`} className={item.status}>
-            {item.status === "passed" ? <Check size={13} /> : <XCircle size={13} />}
-            <span>{item.message}</span>
-          </li>
-        ))}
-      </ul>
+      <EvidenceList items={report.status === "passed" ? report.evidence : problems} />
+      {report.status !== "passed" && passed.length > 0 && (
+        <details className="evidence-passed-nested">
+          <summary>查看已通过 {passed.length} 项</summary>
+          <EvidenceList items={passed} />
+        </details>
+      )}
     </details>
+  );
+}
+
+function EvidenceList({ items }: { items: CheckReport["evidence"] }) {
+  return (
+    <ul>
+      {items.map((item, index) => (
+        <li key={`${item.ruleId}-${index}`} className={item.status}>
+          {item.status === "passed" ? <Check size={13} /> : <XCircle size={13} />}
+          <div><span>{item.message}</span>{item.path && <code className="evidence-path">{item.path}</code>}</div>
+        </li>
+      ))}
+    </ul>
   );
 }
 

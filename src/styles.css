@@ -172,15 +172,24 @@ button:disabled { opacity: 0.42; cursor: not-allowed !important; }
 .diagram-modal-content.is-dragging { cursor: grabbing; }
 .diagram-modal-content .mermaid { min-width: max-content; min-height: 100%; padding: 0; text-align: left; border: 0; border-radius: 0; background: transparent; }
 .diagram-error { padding: 10px; color: var(--danger); font-size: 10px; line-height: 1.5; }
-.evidence { margin-top: 12px; overflow: hidden; border: 1px solid var(--border); border-radius: 8px; background: rgba(255,255,255,0.02); }
+.evidence-anchor { scroll-margin: 12px; }
+.evidence { margin: 0 0 12px; overflow: hidden; border: 1px solid var(--border); border-radius: 8px; background: rgba(255,255,255,0.02); }
+.evidence-failed, .evidence-unknown { border-color: rgba(255,133,143,0.3); background: rgba(255,133,143,0.045); }
 .evidence summary { display: flex; align-items: center; gap: 6px; padding: 9px 10px; color: #c4cce0; font-size: 10px; cursor: pointer; }
 .evidence-passed summary svg { color: var(--success); }
+.evidence-failed > summary, .evidence-unknown > summary { color: #ffd4d8; }
 .evidence-failed summary svg, .evidence-unknown summary svg { color: var(--danger); }
 .evidence ul { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0 10px 10px; list-style: none; }
 .evidence li { display: flex; align-items: flex-start; gap: 6px; color: var(--muted); font-size: 9px; line-height: 1.5; user-select: text; }
+.evidence li > div { display: flex; min-width: 0; flex-direction: column; gap: 3px; }
+.evidence li.failed > div > span, .evidence li.unknown > div > span { color: #efc2c8; }
+.evidence-path { overflow-wrap: anywhere; color: #aebdf0; font-family: Consolas, monospace; font-size: 8px; }
 .evidence li svg { flex: none; margin-top: 1px; }
 .evidence li.passed svg { color: var(--success); }
 .evidence li.failed svg, .evidence li.unknown svg { color: var(--danger); }
+.evidence-passed-nested { margin: 0 10px 10px; border-top: 1px solid var(--border); }
+.evidence-passed-nested > summary { padding-right: 0; padding-left: 0; color: var(--muted); }
+.evidence-passed-nested ul { padding: 0 0 4px; }
 .next-preview { margin-top: 13px; padding: 11px; border: 1px solid rgba(98,213,170,0.16); border-radius: 9px; background: rgba(98,213,170,0.045); }
 .next-preview span { display: block; margin-bottom: 4px; color: var(--success); font-size: 8px; text-transform: uppercase; }
 .next-preview strong { font-size: 11px; }
