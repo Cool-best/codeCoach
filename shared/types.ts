@@ -147,6 +147,7 @@ export interface SessionSnapshot {
 
 export interface AppSettings {
   opacity: number;
+  fontScale: 0.85 | 1 | 1.15 | 1.3;
   alwaysOnTop: boolean;
   clickThrough: boolean;
   collapsed: boolean;

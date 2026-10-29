@@ -7,6 +7,7 @@ import { getGuideId, loadGuide } from "./guide";
 
 const settingsSchema = z.object({
   opacity: z.number().min(0.45).max(1).default(0.94),
+  fontScale: z.union([z.literal(0.85), z.literal(1), z.literal(1.15), z.literal(1.3)]).default(1),
   alwaysOnTop: z.boolean().default(true),
   clickThrough: z.boolean().default(false),
   collapsed: z.boolean().default(false),

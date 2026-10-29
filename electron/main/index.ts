@@ -288,6 +288,7 @@ function registerIpc(): void {
     const input = z
       .object({
         opacity: z.number().min(0.45).max(1).optional(),
+        fontScale: z.union([z.literal(0.85), z.literal(1), z.literal(1.15), z.literal(1.3)]).optional(),
         alwaysOnTop: z.boolean().optional(),
         clickThrough: z.boolean().optional(),
         collapsed: z.boolean().optional(),

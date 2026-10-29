@@ -29,6 +29,7 @@ import { FeedbackPanel } from "./FeedbackPanel";
 
 const defaultSettings: AppSettings = {
   opacity: 0.94,
+  fontScale: 1,
   alwaysOnTop: true,
   clickThrough: false,
   collapsed: false,
@@ -60,6 +61,10 @@ export default function App() {
       .catch((reason: unknown) => setError(messageOf(reason)))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    document.documentElement.style.fontSize = `${Math.round(settings.fontScale * 100)}%`;
+  }, [settings.fontScale]);
 
   useEffect(() => {
     const offSession = window.coach.onSessionEvent((event: SessionEvent) => {
@@ -271,6 +276,7 @@ function SettingsPanel({ settings, guide, workspace, onChange, onGuide, onWorksp
       <div className="settings-title"><span><SlidersHorizontal size={17} /> 浮窗与指导设置</span><button onClick={onClose}><X size={16} /></button></div>
       <div className="settings-scroll">
         <label className="range-setting"><span><strong>窗口透明度</strong><em>{Math.round(settings.opacity * 100)}%</em></span><input type="range" min="0.45" max="1" step="0.01" value={settings.opacity} onChange={(event) => onChange({ opacity: Number(event.target.value) })} /></label>
+        <label className="font-setting"><strong>字体大小</strong><select value={settings.fontScale} onChange={(event) => onChange({ fontScale: Number(event.target.value) as AppSettings["fontScale"] })}><option value={0.85}>小 · 85%</option><option value={1}>标准 · 100%</option><option value={1.15}>大 · 115%</option><option value={1.3}>特大 · 130%</option></select></label>
         <SettingToggle icon={<Pin size={15} />} label="置顶于其他窗口" checked={settings.alwaysOnTop} onChange={(checked) => onChange({ alwaysOnTop: checked })} />
         <SettingToggle icon={<MousePointer2 size={15} />} label="鼠标穿透" description="开启后按 Ctrl+Alt+P 恢复交互" checked={settings.clickThrough} onChange={(checked) => onChange({ clickThrough: checked })} />
         <SettingToggle icon={<ChevronRight size={15} />} label="检查通过后自动进入下一步" checked={settings.autoAdvance} onChange={(checked) => onChange({ autoAdvance: checked })} />
