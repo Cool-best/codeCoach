@@ -166,7 +166,10 @@ button:disabled { opacity: 0.42; cursor: not-allowed !important; }
 .diagram-modal > header strong { font-size: 12px; }
 .diagram-modal > header button { display: grid; place-items: center; width: 28px; height: 28px; padding: 0; color: var(--muted); border: 0; border-radius: 6px; background: transparent; cursor: pointer; }
 .diagram-modal > header button:hover { color: white; background: rgba(255,255,255,0.07); }
-.diagram-modal-content { flex: 1; min-height: 0; overflow: auto; padding: 16px; }
+.diagram-zoom-controls { display: flex; align-items: center; gap: 3px; }
+.diagram-zoom-controls span { min-width: 39px; color: #c4cee2; font-size: 10px; text-align: center; }
+.diagram-modal-content { flex: 1; min-height: 0; overflow: auto; padding: 16px; cursor: grab; }
+.diagram-modal-content.is-dragging { cursor: grabbing; }
 .diagram-modal-content .mermaid { min-width: max-content; min-height: 100%; padding: 0; text-align: left; border: 0; border-radius: 0; background: transparent; }
 .diagram-error { padding: 10px; color: var(--danger); font-size: 10px; line-height: 1.5; }
 .evidence { margin-top: 12px; overflow: hidden; border: 1px solid var(--border); border-radius: 8px; background: rgba(255,255,255,0.02); }
